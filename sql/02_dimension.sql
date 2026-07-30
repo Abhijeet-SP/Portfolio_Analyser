@@ -72,10 +72,10 @@ VALUES
 ('USD_INDEX',   'US Dollar Index (DXY)',                   'INDEX')
 ON CONFLICT (indicator_code) DO NOTHING;
 
-
-/*
-
 -- we have to budil our own using python.
+-- finding indian database for portfolio and everyday trade is tough
+-- will generate my own fabricated protfolios and daily trading till end of 2026
+-- for daily report i will only fetch the data till todays date.
 
 -- A portfolio is the container that holds positions and gets analyzed.
 -- single source of truth for all the portfolio company manages.
@@ -88,4 +88,4 @@ CREATE TABLE portfolio (
 
     CONSTRAINT chk_portfolio_currency CHECK (base_currency ~ '^[A-Z]{3}$')
 );
-*/
+
