@@ -10,6 +10,7 @@ from etl.db_connection import get_connection
 
 def get_instrument_metadata(ticker: str) -> dict:
 # Fetch instrument metadata from Yahoo Finance.
+# info have all the data about the equity, we only select what we needc
 
     stock = yf.Ticker(ticker)
     info = stock.info
@@ -31,18 +32,18 @@ def upsert_instrument(cursor, instrument):
     (ticker, instrument_name, sector, asset_type, currency)
 
     VALUES
-    (%s,%s,%s, %s, %s)
+    (%s, %s, %s, %s, %s)
 
     ON CONFLICT (ticker)
-
     DO UPDATE
     SET
-        instrument_name = EXCLUDED.instrument_name,
+        instrument_name = EXCLUDED.instrument_name, 
         sector = EXCLUDED.sector,
         asset_type = EXCLUDED.asset_type,
         currency = EXCLUDED.currency;
     """
-
+    # EXCLUDED is their to update the excluded name or updated name. 
+    # pass the values to the VALUES(%s, %s, %s, %s, %s)
     cursor.execute(
         query,
         (
@@ -54,19 +55,18 @@ def upsert_instrument(cursor, instrument):
         ),
     )
 
-
 def load_instruments():
     print("Loading ticker universe...")
-    tickers = pd.read_csv("data/etf_bonds_ticker_universe.csv")
+    tickers = pd.read_csv("data/02_etf_bonds_ticker_universe.csv")
 
     conn = get_connection()
     cursor = conn.cursor()
 
     success = 0
     failed = 0
-
+    
+    # _ to skip the index and only get the row
     for _, row in tickers.iterrows():
-
         ticker = row["ticker"]
 
         try:

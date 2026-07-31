@@ -14,7 +14,8 @@ CREATE TABLE instruments (
     currency        CHAR(3)      NOT NULL DEFAULT 'USD', -- ISO-4217 code
 
     CONSTRAINT chk_instruments_asset_type CHECK (asset_type IN( 'EQUITY',
-                                                                'ETF')),
+                                                                'ETF',
+                                                                'BOND_ETF')),
     CONSTRAINT chk_instruments_currency CHECK (currency ~ '^[A-Z]{3}$'),
     CONSTRAINT chk_instruments_ticker_nonblank CHECK (length(trim(ticker)) > 0)
 );
@@ -79,8 +80,8 @@ ON CONFLICT (indicator_code) DO NOTHING;
 
 -- A portfolio is the container that holds positions and gets analyzed.
 -- single source of truth for all the portfolio company manages.
-DROP TABLE IF EXISTS portfolio CASCADE;
-CREATE TABLE portfolio (
+DROP TABLE IF EXISTS portfolios CASCADE;
+CREATE TABLE portfolios (
     portfolio_id     SERIAL       PRIMARY KEY,
     portfolio_name   VARCHAR(200) NOT NULL UNIQUE,
     base_currency    CHAR(3)      NOT NULL DEFAULT 'USD', -- currency all metrics roll up to
