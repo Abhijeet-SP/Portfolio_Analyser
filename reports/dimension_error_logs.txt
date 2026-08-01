@@ -1,0 +1,150 @@
+
+================================================================================
+RUN DATE : 2026-08-01 11:17:02
+SCRIPT   : 01_load_equity_instruments.py
+================================================================================
+
+Ticker : AADHARHFC.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (27, AADHARHFC.NS, null, Financial Services, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : BAJAJHFL.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (69, BAJAJHFL.NS, null, Financial Services, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : EMCURE.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (156, EMCURE.NS, null, Healthcare, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : GODIGIT.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (184, GODIGIT.NS, null, Financial Services, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : HBLENGINE.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (201, HBLENGINE.NS, null, Industrials, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : HYUNDAI.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (220, HYUNDAI.NS, null, Consumer Cyclical, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : INDGN.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (231, INDGN.NS, null, Healthcare, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : ITDCEM.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (252, ITDCEM.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : LTIM.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (304, LTIM.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : MEDIASSIST.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (323, MEDIASSIST.NS, null, Healthcare, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : NTPCGREEN.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (353, NTPCGREEN.NS, null, Utilities, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : OLAELEC.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (360, OLAELEC.NS, null, Consumer Cyclical, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : PEL.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (366, PEL.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : RCOMM.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (399, RCOMM.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : RKSWAMY.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (409, RKSWAMY.NS, null, Communication Services, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : SANSTAR.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (418, SANSTAR.NS, null, Basic Materials, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : SEQUENT.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (429, SEQUENT.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : SUVENPHAR.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (453, SUVENPHAR.NS, null, null, NONE, null).
+
+--------------------------------------------------------------------------------
+Ticker : SWANENERGY.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (455, SWANENERGY.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : SWIGGY.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (456, SWIGGY.NS, null, Consumer Cyclical, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : TATAMOTORS.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (466, TATAMOTORS.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+Ticker : TV18BRDCST.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (487, TV18BRDCST.NS, null, null, NONE, null).
+
+--------------------------------------------------------------------------------
+Ticker : UNITDSPR.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (495, UNITDSPR.NS, null, Consumer Defensive, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : WAAREEENER.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (512, WAAREEENER.NS, null, Technology, EQUITY, INR).
+
+--------------------------------------------------------------------------------
+
+Successful : 476
+Failed     : 24
+================================================================================
+
+================================================================================
+RUN DATE : 2026-08-01 11:22:28
+SCRIPT   : 02_load_etf_bonds_instrument.py
+================================================================================
+
+Ticker : CONSUMBEES.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (533, CONSUMBEES.NS, null, , EQUITY, INR).
+
+--------------------------------------------------------------------------------
+Ticker : GOLDSHARE.NS
+Error  : null value in column "instrument_name" of relation "instruments" violates not-null constraint
+DETAIL:  Failing row contains (541, GOLDSHARE.NS, null, null, null, null).
+
+--------------------------------------------------------------------------------
+
+Successful : 22
+Failed     : 2
+================================================================================

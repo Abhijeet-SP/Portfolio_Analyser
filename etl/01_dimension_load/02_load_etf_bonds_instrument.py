@@ -7,10 +7,16 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import pandas as pd
 import yfinance as yf
 from etl.db_connection import get_connection
+from etl.error_logger import (
+    start_log,
+    log_error,
+    end_log,
+)
+
 
 def get_instrument_metadata(ticker: str) -> dict:
-# Fetch instrument metadata from Yahoo Finance.
-# info have all the data about the equity, we only select what we needc
+    # Fetch instrument metadata from Yahoo Finance.
+    # info have all the data about the equity, we only select what we need
 
     stock = yf.Ticker(ticker)
     info = stock.info
@@ -23,9 +29,10 @@ def get_instrument_metadata(ticker: str) -> dict:
         "currency": info.get("currency"),
     }
 
+
 def upsert_instrument(cursor, instrument):
-# Insert an instrument if it doesn't exist.
-# Update it if it already exists
+    # Insert an instrument if it doesn't exist.
+    # Update it if it already exists
 
     query = """
     INSERT INTO instruments
@@ -37,13 +44,13 @@ def upsert_instrument(cursor, instrument):
     ON CONFLICT (ticker)
     DO UPDATE
     SET
-        instrument_name = EXCLUDED.instrument_name, 
+        instrument_name = EXCLUDED.instrument_name,
         sector = EXCLUDED.sector,
         asset_type = EXCLUDED.asset_type,
         currency = EXCLUDED.currency;
     """
-    # EXCLUDED is their to update the excluded name or updated name. 
-    # pass the values to the VALUES(%s, %s, %s, %s, %s)
+
+    # EXCLUDED refers to the incoming row in an UPSERT.
     cursor.execute(
         query,
         (
@@ -55,6 +62,7 @@ def upsert_instrument(cursor, instrument):
         ),
     )
 
+
 def load_instruments():
     print("Loading ticker universe...")
     tickers = pd.read_csv("data/02_etf_bonds_ticker_universe.csv")
@@ -64,29 +72,51 @@ def load_instruments():
 
     success = 0
     failed = 0
-    
-    # _ to skip the index and only get the row
-    for _, row in tickers.iterrows():
-        ticker = row["ticker"]
 
+    log_file = PROJECT_ROOT / "reports" / "dimension_error_logs.txt"
+
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+    )
+
+    try:
+        # _ to skip the index and only get the row
+        for _, row in tickers.iterrows():
+            ticker = row["ticker"]
+
+            try:
+                instrument = get_instrument_metadata(ticker)
+                upsert_instrument(cursor, instrument)
+
+                conn.commit()
+
+                success += 1
+                print(f"Loaded : {ticker}")
+
+            except Exception as e:
+                conn.rollback()  # Reset transaction after a failure
+                failed += 1
+
+                print(f"Failed : {ticker}")
+                print(e)
+
+                log_error(
+                    log_file=log_file,
+                    ticker=ticker,
+                    error=e,
+                )
+
+    finally:
         try:
-            instrument = get_instrument_metadata(ticker)
-            upsert_instrument(cursor, instrument)
-
-            conn.commit() 
-
-            success += 1
-            print(f"Loaded : {ticker}")
-
-        except Exception as e:
-            conn.rollback()   # Reset transaction after a failure
-            failed += 1
-
-            print(f"Failed : {ticker}")
-            print(e)
-
-    cursor.close()
-    conn.close()
+            end_log(
+                log_file=log_file,
+                success=success,
+                failed=failed,
+            )
+        finally:
+            cursor.close()
+            conn.close()
 
     print("\n------------------------------")
     print(f"Successful : {success}")

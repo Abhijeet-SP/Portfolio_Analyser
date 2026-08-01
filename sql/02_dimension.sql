@@ -11,7 +11,7 @@ CREATE TABLE instruments (
     instrument_name VARCHAR(200) NOT NULL,
     sector          VARCHAR(100),                      -- nullable: not all assets have a sector
     asset_type      VARCHAR(50)  NOT NULL DEFAULT 'EQUITY',
-    currency        CHAR(3)      NOT NULL DEFAULT 'USD', -- ISO-4217 code
+    currency        CHAR(3)      NOT NULL DEFAULT 'INR', -- ISO-4217 code
 
     CONSTRAINT chk_instruments_asset_type CHECK (asset_type IN( 'EQUITY',
                                                                 'ETF',
@@ -27,7 +27,7 @@ CREATE TABLE benchmarks (
     benchmark_id    SERIAL       PRIMARY KEY,
     symbol          VARCHAR(20)  NOT NULL UNIQUE,
     benchmark_name  VARCHAR(200) NOT NULL,
-    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    currency CHAR(3) NOT NULL DEFAULT 'INR',
 
     CONSTRAINT chk_benchmark_currency CHECK (currency ~ '^[A-Z]{3}$'),
     CONSTRAINT chk_benchmarks_symbol_nonblank CHECK (length(trim(symbol)) > 0)
@@ -84,7 +84,7 @@ DROP TABLE IF EXISTS portfolios CASCADE;
 CREATE TABLE portfolios (
     portfolio_id     SERIAL       PRIMARY KEY,
     portfolio_name   VARCHAR(200) NOT NULL UNIQUE,
-    base_currency    CHAR(3)      NOT NULL DEFAULT 'USD', -- currency all metrics roll up to
+    base_currency    CHAR(3)      NOT NULL DEFAULT 'INR', -- currency all metrics roll up to
     inception_date   DATE         NOT NULL,
 
     CONSTRAINT chk_portfolio_currency CHECK (base_currency ~ '^[A-Z]{3}$')

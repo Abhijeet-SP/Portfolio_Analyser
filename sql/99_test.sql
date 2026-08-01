@@ -22,3 +22,9 @@ SELECT
     MAX(txn_date),
     COUNT(DISTINCT txn_date)
 FROM transactions;
+
+SELECT 
+* 
+FROM holdings 
+WHERE portfolio_id = 1 
+    AND as_of_date BETWEEN '2026-05-05' AND '2026-05-08';

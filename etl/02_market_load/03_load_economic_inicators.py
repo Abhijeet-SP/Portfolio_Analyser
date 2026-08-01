@@ -12,6 +12,11 @@ import requests
 import yfinance as yf
 
 from etl.db_connection import get_connection
+from etl.error_logger import (
+    start_log,
+    log_error,
+    end_log,
+)
 
 BACKFILL_DAYS = 365
 
@@ -48,21 +53,31 @@ def download_yfinance_series(symbol):
     return data
 
 
-def load_market_indicators(conn, cursor):
+def load_market_indicators(conn, cursor, log_file):
+    success = 0
+    failed = 0
+    total_rows = 0
+
     print("\n" + "-" * 60)
     print("1. Market-Quoted Indicators (yfinance)")
     print("-" * 60)
-
-    total_rows = 0
 
     for indicator_code, symbol in MARKET_INDICATORS.items():
         print(f"\nDownloading {indicator_code} ({symbol})")
 
         try:
             prices = download_yfinance_series(symbol)
-            print(prices.columns)
             if prices.empty:
-                print("No data found.")
+                failed += 1
+
+                print(f"No data found : {indicator_code}")
+
+                log_error(
+                    log_file=log_file,
+                    ticker=indicator_code,
+                    error="No data found",
+                )
+
                 continue
 
             inserted = 0
@@ -83,15 +98,26 @@ def load_market_indicators(conn, cursor):
                 inserted += 1
 
             conn.commit()
+
+            success += 1
             total_rows += inserted
+
             print(f"{inserted} rows loaded.")
 
         except Exception as e:
             conn.rollback()
+            failed += 1
+
             print(f"Failed : {indicator_code}")
             print(e)
 
-    return total_rows
+            log_error(
+                log_file=log_file,
+                ticker=indicator_code,
+                error=e,
+            )
+
+    return success, failed, total_rows
 
 
 FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
@@ -120,72 +146,131 @@ def fetch_fred_series(series_id):
     return df.dropna(subset=["value"]).sort_values("observation_date")
 
 
-def load_fred_level_indicators(conn, cursor):
+def load_fred_level_indicators(conn, cursor, log_file):
+    success = 0
+    failed = 0
     total_rows = 0
+
     cutoff = pd.Timestamp(date.today()) - pd.Timedelta(days=BACKFILL_DAYS)
 
     for indicator_code, series_id in FRED_LEVEL_SERIES.items():
         print(f"\nDownloading {indicator_code} ({series_id})")
+
         try:
             df = fetch_fred_series(series_id)
             df = df[df["observation_date"] >= cutoff]
 
+            if df.empty:
+                failed += 1
+
+                print(f"No data found : {indicator_code}")
+
+                log_error(
+                    log_file=log_file,
+                    ticker=indicator_code,
+                    error="No data found",
+                )
+
+                continue
+
             inserted = 0
+
             for _, row in df.iterrows():
                 upsert_indicator_value(
                     cursor,
                     indicator_code,
                     row["observation_date"].date(),
-                    row["value"]
+                    row["value"],
                 )
                 inserted += 1
 
             conn.commit()
+
+            success += 1
             total_rows += inserted
+
             print(f"{inserted} rows loaded.")
 
         except Exception as e:
             conn.rollback()
+            failed += 1
+
             print(f"Failed : {indicator_code}")
             print(e)
 
-    return total_rows
+            log_error(
+                log_file=log_file,
+                ticker=indicator_code,
+                error=e,
+            )
+
+    return success, failed, total_rows
 
 
-def load_fred_growth_indicators(conn, cursor):
+def load_fred_growth_indicators(conn, cursor, log_file):
+    success = 0
+    failed = 0
     total_rows = 0
+
     cutoff = pd.Timestamp(date.today()) - pd.Timedelta(days=BACKFILL_DAYS)
 
     for indicator_code, series_id in FRED_GROWTH_SERIES.items():
         print(f"\nDownloading {indicator_code} ({series_id})")
+
         try:
             df = fetch_fred_series(series_id)
+
             # Quarterly YoY growth: compare each quarter to the same
             # quarter 4 rows earlier (index is already date-sorted).
             df["yoy_growth"] = df["value"].pct_change(periods=4) * 100
             df = df.dropna(subset=["yoy_growth"])
             df = df[df["observation_date"] >= cutoff]
 
+            if df.empty:
+                failed += 1
+
+                print(f"No data found : {indicator_code}")
+
+                log_error(
+                    log_file=log_file,
+                    ticker=indicator_code,
+                    error="No data found",
+                )
+
+                continue
+
             inserted = 0
+
             for _, row in df.iterrows():
                 upsert_indicator_value(
                     cursor,
                     indicator_code,
                     row["observation_date"].date(),
-                    row["yoy_growth"]
+                    row["yoy_growth"],
                 )
                 inserted += 1
 
             conn.commit()
+
+            success += 1
             total_rows += inserted
+
             print(f"{inserted} rows loaded.")
 
         except Exception as e:
             conn.rollback()
+            failed += 1
+
             print(f"Failed : {indicator_code}")
             print(e)
 
-    return total_rows
+            log_error(
+                log_file=log_file,
+                ticker=indicator_code,
+                error=e,
+            )
+
+    return success, failed, total_rows
 
 
 
@@ -203,31 +288,67 @@ CPI_HISTORY = [
 ]
 
 
-def seed_manual_indicators(conn, cursor):
+def seed_manual_indicators(conn, cursor, log_file):
     print("\n" + "-" * 60)
     print("3. Manually-Seeded Indicators (CPI, REPO_RATE)")
     print("-" * 60)
 
+    success = 0
+    failed = 0
     total_rows = 0
 
     try:
+        if not REPO_RATE_HISTORY and not CPI_HISTORY:
+            failed += 1
+
+            print("No manual indicator data found.")
+
+            log_error(
+                log_file=log_file,
+                ticker="MANUAL_INDICATORS",
+                error="No data found",
+            )
+
+            return success, failed, total_rows
+
         for effective_date, rate in REPO_RATE_HISTORY:
-            upsert_indicator_value(cursor, "REPO_RATE", effective_date, rate)
+            upsert_indicator_value(
+                cursor,
+                "REPO_RATE",
+                effective_date,
+                rate,
+            )
             total_rows += 1
 
         for month_date, value in CPI_HISTORY:
-            upsert_indicator_value(cursor, "CPI", month_date, value)
+            upsert_indicator_value(
+                cursor,
+                "CPI",
+                month_date,
+                value,
+            )
             total_rows += 1
 
         conn.commit()
+
+        success = 1
+
         print(f"{total_rows} rows loaded.")
 
     except Exception as e:
         conn.rollback()
+        failed = 1
+
         print("Failed to seed manual indicators")
         print(e)
 
-    return total_rows
+        log_error(
+            log_file=log_file,
+            ticker="MANUAL_INDICATORS",
+            error=e,
+        )
+
+    return success, failed, total_rows
 
 
 # ---------------------------------------------------------------------------
@@ -272,26 +393,62 @@ def upsert_indicator_value(cursor, indicator_code, observation_date, value):
 # ---------------------------------------------------------------------------
 
 def load_economic_indicators():
+
     print("=" * 60)
     print("Loading Economic Indicators")
     print("=" * 60)
 
     conn = get_connection()
     cursor = conn.cursor()
+
+    success = 0
+    failed = 0
     total_rows = 0
 
-    total_rows += load_market_indicators(conn, cursor)
-    total_rows += load_fred_level_indicators(conn, cursor)
-    total_rows += load_fred_growth_indicators(conn, cursor)
-    total_rows += seed_manual_indicators(conn, cursor)
+    log_file = PROJECT_ROOT / "reports" / "fact_error_logs.txt"
 
-    cursor.close()
-    conn.close()
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+    )
+
+    try:
+        s, f, rows = load_market_indicators(conn, cursor, log_file)
+        success += s
+        failed += f
+        total_rows += rows
+
+        s, f, rows = load_fred_level_indicators(conn, cursor, log_file)
+        success += s
+        failed += f
+        total_rows += rows
+
+        s, f, rows = load_fred_growth_indicators(conn, cursor, log_file)
+        success += s
+        failed += f
+        total_rows += rows
+
+        s, f, rows = seed_manual_indicators(conn, cursor, log_file)
+        success += s
+        failed += f
+        total_rows += rows
+
+    finally:
+        try:
+            end_log(
+                log_file=log_file,
+                success=success,
+                failed=failed,
+            )
+        finally:
+            cursor.close()
+            conn.close()
 
     print("\n" + "=" * 60)
-    print(f"Total Rows Loaded : {total_rows}")
+    print(f"Successful Sources : {success}")
+    print(f"Failed Sources     : {failed}")
+    print(f"Total Rows Loaded  : {total_rows}")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     load_economic_indicators()

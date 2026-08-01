@@ -7,6 +7,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import pandas as pd
 import yfinance as yf
 from etl.db_connection import get_connection
+from etl.error_logger import (start_log,log_error,end_log,)
 
 def get_instrument_metadata(ticker: str) -> dict:
 # Fetch instrument metadata from Yahoo Finance.
@@ -55,7 +56,6 @@ def upsert_instrument(cursor, instrument):
         ),
     )
 
-
 def load_instruments():
     print("Loading ticker universe...")
     tickers = pd.read_csv("data/01_nifty_500_ticker_universe.csv")
@@ -66,28 +66,48 @@ def load_instruments():
     success = 0
     failed = 0
 
+    log_file = PROJECT_ROOT / "reports" / "dimension_error_logs.txt"
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+)
+
     # _ to skip the index and only get the row
-    for _, row in tickers.iterrows():
-        ticker = row["ticker"]
+    try:
+        for _, row in tickers.iterrows():
+            ticker = row["ticker"]
 
+            try:
+                instrument = get_instrument_metadata(ticker)
+                upsert_instrument(cursor, instrument)
+
+                conn.commit() 
+
+                success += 1
+                print(f"Loaded : {ticker}")
+
+            except Exception as e:
+                conn.rollback()   # Reset transaction after a failure
+                failed += 1
+
+                print(f"Failed : {ticker}")
+                print(e)
+
+                log_error(
+                    log_file=log_file,
+                    ticker=ticker,
+                    error=e,
+                )
+    finally:
         try:
-            instrument = get_instrument_metadata(ticker)
-            upsert_instrument(cursor, instrument)
-
-            conn.commit() 
-
-            success += 1
-            print(f"Loaded : {ticker}")
-
-        except Exception as e:
-            conn.rollback()   # Reset transaction after a failure
-            failed += 1
-
-            print(f"Failed : {ticker}")
-            print(e)
-
-    cursor.close()
-    conn.close()
+            end_log(
+                log_file=log_file,
+                success=success,
+                failed=failed,
+                )
+        finally:
+            cursor.close()
+            conn.close()
 
     print("\n------------------------------")
     print(f"Successful : {success}")

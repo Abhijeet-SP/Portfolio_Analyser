@@ -1,7 +1,8 @@
 -- setup the schema
+DROP SCHEMA IF EXISTS risk_platform CASCADE;
 
-CREATE SCHEMA IF NOT EXISTS risk_platform;
+CREATE SCHEMA risk_platform;
 SET search_path TO risk_platform;
-SELECT current_database();
-SELECT current_schema();
-
+SELECT
+    current_database() AS database_name,
+    current_schema() AS active_schema;

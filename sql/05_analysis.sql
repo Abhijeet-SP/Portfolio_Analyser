@@ -1,4 +1,3 @@
--- Analytics layer: metrics COMPUTED by the Python risk engine (Phase 4).
 -- Created empty here; the engine is the only writer. Tableau reads, never computes.
 SET search_path TO risk_platform;
 
