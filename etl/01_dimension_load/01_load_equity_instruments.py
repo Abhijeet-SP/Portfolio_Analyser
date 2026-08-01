@@ -5,24 +5,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
-import yfinance as yf
 from etl.db_connection import get_connection
 from etl.error_logger import (start_log,log_error,end_log,)
 
-def get_instrument_metadata(ticker: str) -> dict:
-# Fetch instrument metadata from Yahoo Finance.
-# info have all the data about the equity, we only select what we needc
 
-    stock = yf.Ticker(ticker)
-    info = stock.info
+def clean_row(row):
+# CSV blanks come back from pandas as NaN.
+# sector is the only nullable column, so send it as None instead of "NaN".
 
-    return {
-        "ticker": ticker,
-        "instrument_name": info.get("longName"),
-        "sector": info.get("sector"),
-        "asset_type": info.get("quoteType"),
-        "currency": info.get("currency"),
-    }
+    instrument = row.to_dict()
+    instrument["sector"] = None if pd.isna(instrument["sector"]) else instrument["sector"]
+    return instrument
+
 
 def upsert_instrument(cursor, instrument):
 # Insert an instrument if it doesn't exist.
@@ -75,22 +69,21 @@ def load_instruments():
     # _ to skip the index and only get the row
     try:
         for _, row in tickers.iterrows():
-            ticker = row["ticker"]
+            ticker = clean_row(row)
 
             try:
-                instrument = get_instrument_metadata(ticker)
-                upsert_instrument(cursor, instrument)
+                upsert_instrument(cursor, ticker)
 
                 conn.commit() 
 
                 success += 1
-                print(f"Loaded : {ticker}")
+                print(f"Loaded : {ticker["instrument_name"]}")
 
             except Exception as e:
                 conn.rollback()   # Reset transaction after a failure
                 failed += 1
 
-                print(f"Failed : {ticker}")
+                print(f"Failed : {ticker["instrument_name"]}")
                 print(e)
 
                 log_error(

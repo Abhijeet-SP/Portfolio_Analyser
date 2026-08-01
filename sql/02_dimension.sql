@@ -15,7 +15,8 @@ CREATE TABLE instruments (
 
     CONSTRAINT chk_instruments_asset_type CHECK (asset_type IN( 'EQUITY',
                                                                 'ETF',
-                                                                'BOND_ETF')),
+                                                                'BOND_ETF',
+                                                                'COMMODITY_ETF')),
     CONSTRAINT chk_instruments_currency CHECK (currency ~ '^[A-Z]{3}$'),
     CONSTRAINT chk_instruments_ticker_nonblank CHECK (length(trim(ticker)) > 0)
 );

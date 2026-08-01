@@ -148,3 +148,53 @@ DETAIL:  Failing row contains (541, GOLDSHARE.NS, null, null, null, null).
 Successful : 22
 Failed     : 2
 ================================================================================
+
+================================================================================
+RUN DATE : 2026-08-01 13:40:40
+SCRIPT   : 02_load_etf_bonds_instrument.py
+================================================================================
+
+Ticker : {'ticker': 'GOLDBEES.NS', 'instrument_name': 'Nippon India ETF Gold BeES', 'sector': nan, 'asset_type': 'COMMODITY_ETF', 'currency': 'INR'}
+Error  : new row for relation "instruments" violates check constraint "chk_instruments_asset_type"
+DETAIL:  Failing row contains (14, GOLDBEES.NS, Nippon India ETF Gold BeES, NaN, COMMODITY_ETF, INR).
+
+--------------------------------------------------------------------------------
+Ticker : {'ticker': 'SILVERBEES.NS', 'instrument_name': 'Nippon India Silver ETF', 'sector': nan, 'asset_type': 'COMMODITY_ETF', 'currency': 'INR'}
+Error  : new row for relation "instruments" violates check constraint "chk_instruments_asset_type"
+DETAIL:  Failing row contains (15, SILVERBEES.NS, Nippon India Silver ETF, NaN, COMMODITY_ETF, INR).
+
+--------------------------------------------------------------------------------
+Ticker : {'ticker': 'SETFGOLD.NS', 'instrument_name': 'SBI Gold ETF', 'sector': nan, 'asset_type': 'COMMODITY_ETF', 'currency': 'INR'}
+Error  : new row for relation "instruments" violates check constraint "chk_instruments_asset_type"
+DETAIL:  Failing row contains (16, SETFGOLD.NS, SBI Gold ETF, NaN, COMMODITY_ETF, INR).
+
+--------------------------------------------------------------------------------
+Ticker : {'ticker': 'GOLDSHARE.NS', 'instrument_name': 'UTI Gold Exchange Traded Fund', 'sector': nan, 'asset_type': 'COMMODITY_ETF', 'currency': 'INR'}
+Error  : new row for relation "instruments" violates check constraint "chk_instruments_asset_type"
+DETAIL:  Failing row contains (17, GOLDSHARE.NS, UTI Gold Exchange Traded Fund, NaN, COMMODITY_ETF, INR).
+
+--------------------------------------------------------------------------------
+
+Successful : 20
+Failed     : 4
+================================================================================
+
+================================================================================
+RUN DATE : 2026-08-01 13:42:05
+SCRIPT   : 02_load_etf_bonds_instrument.py
+================================================================================
+
+
+Successful : 24
+Failed     : 0
+================================================================================
+
+================================================================================
+RUN DATE : 2026-08-01 13:52:34
+SCRIPT   : 01_load_equity_instruments.py
+================================================================================
+
+
+Successful : 498
+Failed     : 0
+================================================================================
