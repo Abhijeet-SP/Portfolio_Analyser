@@ -6,13 +6,26 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 from datetime import date
+
 from etl.db_connection import get_connection
+from etl.error_logger import (
+    start_log,
+    log_error,
+    end_log,
+)
+
+
+def get_last_holding_date(cursor):
+
+    cursor.execute("""
+        SELECT MAX(as_of_date)
+        FROM holdings;
+    """)
+
+    return cursor.fetchone()[0]
+
 
 def upsert_holdings(cursor, holding):
-    """
-    Insert a holding if it doesn't exist.
-    Update it if it already exists.
-    """
 
     query = """
     INSERT INTO holdings
@@ -26,6 +39,7 @@ def upsert_holdings(cursor, holding):
         market_value,
         weight
     )
+
     VALUES
     (%s, %s, %s, %s, %s, %s, %s, %s)
 
@@ -58,42 +72,95 @@ def upsert_holdings(cursor, holding):
 
 
 def load_holdings():
-    print("Loading holdings data...")
-    holding_df = pd.read_csv("data/05_holding_universe.csv")
 
-    holding_df["as_of_date"] = pd.to_datetime(holding_df["as_of_date"])
-    holding_df = holding_df[holding_df["as_of_date"].dt.date <= date.today()]
+    print("=" * 60)
+    print("Loading Holdings")
+    print("=" * 60)
+
+    holding_df = pd.read_csv(
+        PROJECT_ROOT / "data" / "06_holdings_universe.csv",
+        parse_dates=["as_of_date"],
+    )
+
+    today = pd.Timestamp(date.today())
+
+    holding_df = holding_df[
+        holding_df["as_of_date"] <= today
+    ]
 
     conn = get_connection()
     cursor = conn.cursor()
 
+    last_date = get_last_holding_date(cursor)
+
+    if last_date is not None:
+        holding_df = holding_df[
+            holding_df["as_of_date"] > pd.Timestamp(last_date)
+        ]
+
+    if holding_df.empty:
+        print("Holdings already up to date.")
+        cursor.close()
+        conn.close()
+        return
+
     success = 0
     failed = 0
 
-    for _, row in holding_df.iterrows():
-        holdings = row.to_dict()
+    log_file = PROJECT_ROOT / "reports" / "holdings_error_logs.txt"
+
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+    )
+
+    try:
+
+        for _, row in holding_df.iterrows():
+
+            holding = row.to_dict()
+
+            try:
+
+                upsert_holdings(cursor, holding)
+
+                conn.commit()
+
+                success += 1
+
+                print(f"Loaded : {holding['holding_id']}")
+
+            except Exception as e:
+
+                conn.rollback()
+
+                failed += 1
+
+                print(f"Failed : {holding['holding_id']}")
+                print(e)
+
+                log_error(
+                    log_file=log_file,
+                    ticker=f"Holding ID : {holding['holding_id']}",
+                    error=e,
+                )
+
+    finally:
 
         try:
-            upsert_holdings(cursor, holdings)
-            conn.commit() 
+            end_log(
+                log_file=log_file,
+                success=success,
+                failed=failed,
+            )
+        finally:
+            cursor.close()
+            conn.close()
 
-            success += 1
-            print(f"Loaded : {holdings['holding_id']}")
-
-        except Exception as e:
-            conn.rollback()   # Reset transaction after a failure
-            failed += 1
-
-            print(f"Failed : {holdings['holding_id']}")
-            print(e)
-
-    cursor.close()
-    conn.close()
-
-    print("\n------------------------------")
+    print("\n" + "=" * 30)
     print(f"Successful : {success}")
     print(f"Failed     : {failed}")
-    print("------------------------------")
+    print("=" * 30)
 
 
 if __name__ == "__main__":

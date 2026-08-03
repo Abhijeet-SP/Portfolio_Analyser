@@ -7,6 +7,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import pandas as pd
 from datetime import date
 from etl.db_connection import get_connection
+from etl.error_logger import (
+    start_log,
+    log_error,
+    end_log,
+)
 
 def upsert_transactions(cursor, transaction):
 
@@ -59,19 +64,45 @@ def upsert_transactions(cursor, transaction):
         ),
     )
 
+def get_last_transaction_date(cursor):
+
+    cursor.execute("""
+        SELECT MAX(txn_date)
+        FROM transactions;
+    """)
+
+    return cursor.fetchone()[0]
 
 def load_transactions():
     print("Loading transactions data...")
-    transaction_df = pd.read_csv("data/04_transaction_universe.csv")
+    transaction_df = pd.read_csv("data/05_transactions_universe.csv",parse_dates=["txn_date"],)
 
-    transaction_df["txn_date"] = pd.to_datetime(transaction_df["txn_date"])
-    transaction_df = transaction_df[transaction_df["txn_date"].dt.date <= date.today()]
+    today = pd.Timestamp(date.today())
+    transaction_df = transaction_df[transaction_df["txn_date"] <= today]
 
     conn = get_connection()
     cursor = conn.cursor()
 
+    last_date = get_last_transaction_date(cursor)
+
+    if last_date is not None:
+        transaction_df = transaction_df[transaction_df["txn_date"] > pd.Timestamp(last_date)]
+
+    if transaction_df.empty:
+        print("Transactions already up to date.")
+        cursor.close()
+        conn.close()
+        return
+
     success = 0
     failed = 0
+
+    log_file = PROJECT_ROOT / "reports" / "transactions_error_logs.txt"
+
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+    )
 
     for _, row in transaction_df.iterrows():
         transaction = row.to_dict()
@@ -84,14 +115,29 @@ def load_transactions():
             print(f"Loaded : {transaction['transaction_id']}")
 
         except Exception as e:
+
             conn.rollback()
             failed += 1
 
             print(f"Failed : {transaction['transaction_id']}")
             print(e)
 
-    cursor.close()
-    conn.close()
+            log_error(
+                log_file=log_file,
+                ticker=f"Transaction ID : {transaction['transaction_id']}",
+                error=e,
+            )
+
+    try:
+        end_log(
+            log_file=log_file,
+            success=success,
+            failed=failed,
+        )
+
+    finally:
+        cursor.close()
+        conn.close()
 
     print("\n------------------------------")
     print(f"Successful : {success}")

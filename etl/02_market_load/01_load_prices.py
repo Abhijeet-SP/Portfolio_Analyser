@@ -4,8 +4,8 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from datetime import date, timedelta
-import yfinance as yf
+import pandas as pd
+from datetime import date
 
 from etl.db_connection import get_connection
 from etl.error_logger import (
@@ -13,9 +13,6 @@ from etl.error_logger import (
     log_error,
     end_log,
 )
-
-BACKFILL_DAYS = 365
-
 
 def get_instruments(cursor):
     # Returns: List of (instrument_id, ticker)
@@ -30,6 +27,18 @@ def get_instruments(cursor):
 
     return cursor.fetchall()
 
+def get_last_price_date(cursor, instrument_id):
+
+    cursor.execute(
+        """
+        SELECT MAX(price_date)
+        FROM prices
+        WHERE instrument_id = %s;
+        """,
+        (instrument_id,),
+    )
+
+    return cursor.fetchone()[0]
 
 def upsert_price(
     cursor,
@@ -74,22 +83,15 @@ def upsert_price(
         ),
     )
 
+# Load all prices from CSV
+def load_prices_csv():
 
-# Download the data from Yahoo Finance
-def download_prices(ticker):
-
-    end_date = date.today()
-    start_date = end_date - timedelta(days=BACKFILL_DAYS)
-
-    data = yf.download(
-        ticker,
-        start=start_date,
-        end=end_date,
-        progress=False,
-        auto_adjust=False,
+    prices = pd.read_csv(
+        PROJECT_ROOT / "data" / "04_prices_universe.csv",
+        parse_dates=["price_date"],
     )
 
-    return data
+    return prices
 
 
 # Load the prices
@@ -114,30 +116,39 @@ def load_prices():
     )
 
     instruments = get_instruments(cursor)
+    all_prices = load_prices_csv()
+    today = pd.Timestamp(date.today())
 
     try:
         for instrument_id, ticker in instruments:
 
-            print(f"\nDownloading {ticker}...")
+            print(f"\nLoading {ticker}...")
 
             try:
-                prices = download_prices(ticker)
+                prices = all_prices[all_prices["instrument_id"] == instrument_id].copy()
+
+                last_date = get_last_price_date(cursor, instrument_id)
+
+                if last_date is not None:
+                    prices = prices[prices["price_date"] > pd.Timestamp(last_date)]
+
+                prices = prices[prices["price_date"] <= today]
 
                 if prices.empty:
-                    print("No data found.")
+                    print("No new data found.")
                     failed += 1
                     continue
 
                 inserted = 0
 
-                for price_date, row in prices.iterrows():
+                for _, row in prices.iterrows():
 
                     upsert_price(
                         cursor,
                         instrument_id,
-                        price_date.date(),
-                        row["Adj Close"],
-                        row["Volume"],
+                        row["price_date"].date(),
+                        row["adj_close"],
+                        row["volume"],
                     )
 
                     inserted += 1
