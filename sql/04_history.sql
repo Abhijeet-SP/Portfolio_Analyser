@@ -38,6 +38,35 @@ CREATE TABLE holdings (
     CONSTRAINT ck_holdings_qty_nonneg CHECK (quantity >= 0)
 );
 
+DROP TABLE IF EXISTS portfolio_cashflows CASCADE;
+CREATE TABLE portfolio_cashflows (
+    cashflow_id      BIGSERIAL      PRIMARY KEY,
+    portfolio_id     INTEGER        NOT NULL,   -- -> portfolio.portfolio_id
+    flow_date        DATE           NOT NULL,
+    buy_flow         NUMERIC(18,4)  NOT NULL DEFAULT 0,
+    sell_flow        NUMERIC(18,4)  NOT NULL DEFAULT 0,
+    net_cash_flow    NUMERIC(18,4)  NOT NULL DEFAULT 0,
+    dividend_income  NUMERIC(18,4)  NOT NULL DEFAULT 0,
+    buy_count        INTEGER        NOT NULL DEFAULT 0,
+    sell_count       INTEGER        NOT NULL DEFAULT 0,
+    dividend_count   INTEGER        NOT NULL DEFAULT 0,
+
+    -- One summary row per portfolio per day
+    CONSTRAINT uq_cashflows_pf_date UNIQUE (portfolio_id, flow_date),
+
+    -- Monetary values cannot be negative
+    CONSTRAINT ck_buy_flow_nonneg CHECK (buy_flow >= 0),
+    CONSTRAINT ck_sell_flow_nonneg CHECK (sell_flow >= 0),
+    CONSTRAINT ck_dividend_income_nonneg CHECK (dividend_income >= 0),
+
+    -- Counts cannot be negative
+    CONSTRAINT ck_buy_count_nonneg CHECK (buy_count >= 0),
+    CONSTRAINT ck_sell_count_nonneg CHECK (sell_count >= 0),
+    CONSTRAINT ck_dividend_count_nonneg CHECK (dividend_count >= 0),
+
+    -- Ensure the stored net flow is consistent
+    CONSTRAINT ck_net_cash_flow CHECK (net_cash_flow = buy_flow - sell_flow)
+);
 
 /*
 -- Pull the ledger for a portfolio in date order (statements, replays).

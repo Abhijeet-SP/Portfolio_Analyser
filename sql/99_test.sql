@@ -28,3 +28,5 @@ SELECT
 FROM holdings 
 WHERE portfolio_id = 1 
     AND as_of_date BETWEEN '2026-05-05' AND '2026-05-08';
+
+SELECT COUNT(*), MAX(flow_date) FROM portfolio_cashflows;

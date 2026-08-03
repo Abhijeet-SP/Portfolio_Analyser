@@ -26,6 +26,15 @@ def log_error(log_file: str, ticker: str, error):
         f.write("-" * 80 + "\n")
 
 
+def log_record_error(log_file: str, record: str, error):
+    """
+    Append a failed record and its error.
+    """
+    with open(log_file, "a") as f:
+        f.write(f"Record : {record}\n")
+        f.write(f"Error  : {error}\n")
+        f.write("-" * 80 + "\n")
+        
 def end_log(log_file: str, success: int, failed: int):
     """
     Finish the ETL run with a summary.
