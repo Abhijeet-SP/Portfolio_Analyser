@@ -97,7 +97,7 @@ def load_transactions():
     success = 0
     failed = 0
 
-    log_file = PROJECT_ROOT / "reports" / "transactions_error_logs.txt"
+    log_file = PROJECT_ROOT / "reports" / "03_transactions_error_logs.txt"
 
     start_log(
         log_file=log_file,

@@ -60,7 +60,7 @@ def load_instruments():
     success = 0
     failed = 0
 
-    log_file = PROJECT_ROOT / "reports" / "dimension_error_logs.txt"
+    log_file = PROJECT_ROOT / "reports" / "01_dimension_error_logs.txt"
     start_log(
         log_file=log_file,
         script_name=Path(__file__).name,

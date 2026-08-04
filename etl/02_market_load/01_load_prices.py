@@ -108,7 +108,7 @@ def load_prices():
     failed = 0
     total_loaded = 0
 
-    log_file = PROJECT_ROOT / "reports" / "fact_error_logs.txt"
+    log_file = PROJECT_ROOT / "reports" / "02_price_error_logs.txt"
 
     start_log(
         log_file=log_file,
