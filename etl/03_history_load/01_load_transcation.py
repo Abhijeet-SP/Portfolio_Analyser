@@ -75,7 +75,10 @@ def get_last_transaction_date(cursor):
 
 def load_transactions():
     print("Loading transactions data...")
-    transaction_df = pd.read_csv("data/05_transactions_universe.csv",parse_dates=["txn_date"],)
+    transaction_df = pd.read_csv(
+        PROJECT_ROOT / "data" / "05_transactions_universe.csv",
+        parse_dates=["txn_date"],
+    )
 
     today = pd.Timestamp(date.today())
     transaction_df = transaction_df[transaction_df["txn_date"] <= today]

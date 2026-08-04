@@ -1,0 +1,3 @@
+2026-08-04 17:43:56 | START  | daily load
+2026-08-04 17:44:13 | OK     | daily load finished in 17s
+2026-08-04 17:44:33 | INSTALL| scheduled daily at 16:15

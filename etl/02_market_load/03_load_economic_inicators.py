@@ -35,9 +35,36 @@ MARKET_INDICATORS = {
 }
 
 
-def download_yfinance_series(symbol):
-    end_date = date.today()
-    start_date = end_date - timedelta(days=BACKFILL_DAYS)
+def get_last_indicator_date(cursor, indicator_code):
+
+    cursor.execute(
+        """
+        SELECT MAX(observation_date)
+        FROM economic_indicator_prices
+        WHERE indicator_code = %s;
+        """,
+        (indicator_code,),
+    )
+
+    return cursor.fetchone()[0]
+
+
+def get_download_start(last_date):
+    """
+    Resume the day after what is already stored, or fall back to a full
+    backfill for an indicator that has never been loaded.
+    """
+
+    if last_date is None:
+        return date.today() - timedelta(days=BACKFILL_DAYS)
+
+    return last_date + timedelta(days=1)
+
+
+def download_yfinance_series(symbol, start_date):
+    # Yahoo treats end as exclusive, so today needs tomorrow's date to be
+    # included. Without this the 16:15 run never picks up today's close.
+    end_date = date.today() + timedelta(days=1)
 
     data = yf.download(
     symbol,
@@ -56,6 +83,7 @@ def download_yfinance_series(symbol):
 def load_market_indicators(conn, cursor, log_file):
     success = 0
     failed = 0
+    skipped = 0
     total_rows = 0
 
     print("\n" + "-" * 60)
@@ -63,11 +91,29 @@ def load_market_indicators(conn, cursor, log_file):
     print("-" * 60)
 
     for indicator_code, symbol in MARKET_INDICATORS.items():
-        print(f"\nDownloading {indicator_code} ({symbol})")
 
         try:
-            prices = download_yfinance_series(symbol)
+            last_date = get_last_indicator_date(cursor, indicator_code)
+            start_date = get_download_start(last_date)
+
+            if start_date > date.today():
+                print(f"\n{indicator_code} : already up to date.")
+                skipped += 1
+                continue
+
+            print(f"\nDownloading {indicator_code} ({symbol}) from {start_date}")
+
+            prices = download_yfinance_series(symbol, start_date)
+
             if prices.empty:
+                # An empty window on an already-loaded series just means no
+                # quotes since last_date (weekend, holiday). Empty on a
+                # first-ever load is a real download failure.
+                if last_date is not None:
+                    print(f"No new data : {indicator_code}")
+                    skipped += 1
+                    continue
+
                 failed += 1
 
                 print(f"No data found : {indicator_code}")
@@ -75,7 +121,7 @@ def load_market_indicators(conn, cursor, log_file):
                 log_error(
                     log_file=log_file,
                     ticker=indicator_code,
-                    error="No data found",
+                    error="No data found on first load",
                 )
 
                 continue
@@ -117,7 +163,12 @@ def load_market_indicators(conn, cursor, log_file):
                 error=e,
             )
 
-    return success, failed, total_rows
+    if skipped:
+        print(f"\n{skipped} market indicator(s) already current.")
+
+    # Sections all report (handled, failed, rows); an already-current
+    # indicator was handled fine, so it counts there and not as a failure.
+    return success + skipped, failed, total_rows
 
 
 FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"

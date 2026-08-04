@@ -106,6 +106,7 @@ def load_prices():
 
     success = 0
     failed = 0
+    skipped = 0
     total_loaded = 0
 
     log_file = PROJECT_ROOT / "reports" / "02_price_error_logs.txt"
@@ -135,8 +136,10 @@ def load_prices():
                 prices = prices[prices["price_date"] <= today]
 
                 if prices.empty:
+                    # nothing left after the incremental filter: this
+                    # instrument is current, which is not a failure
                     print("No new data found.")
-                    failed += 1
+                    skipped += 1
                     continue
 
                 inserted = 0
@@ -186,9 +189,10 @@ def load_prices():
             conn.close()
 
     print("\n" + "=" * 60)
-    print(f"Instruments Loaded : {success}")
-    print(f"Instruments Failed : {failed}")
-    print(f"Total Rows Loaded : {total_loaded}")
+    print(f"Instruments Loaded  : {success}")
+    print(f"Instruments Current : {skipped}")
+    print(f"Instruments Failed  : {failed}")
+    print(f"Total Rows Loaded   : {total_loaded}")
     print("=" * 60)
 
 

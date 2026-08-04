@@ -6,6 +6,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 from etl.db_connection import get_connection
+from etl.error_logger import (
+    start_log,
+    log_error,
+    end_log,
+)
 
 def upsert_portfolio(cursor, portfolio):
 # Insert a portfolio if it doesn't exist.
@@ -40,7 +45,7 @@ def upsert_portfolio(cursor, portfolio):
 
 def load_portfolio():
     print("Loading portfolio data...")
-    portfolios = pd.read_csv("data/03_portfolio_universe.csv")
+    portfolios = pd.read_csv(PROJECT_ROOT / "data" / "03_portfolio_universe.csv")
     # whole data will be directly taken from a csv file.
 
     conn = get_connection()
@@ -49,12 +54,19 @@ def load_portfolio():
     success = 0
     failed = 0
 
+    log_file = PROJECT_ROOT / "reports" / "01_dimension_error_logs.txt"
+
+    start_log(
+        log_file=log_file,
+        script_name=Path(__file__).name,
+    )
+
     for _, row in portfolios.iterrows():
         portfolio = row.to_dict()
 
         try:
             upsert_portfolio(cursor, portfolio)
-            conn.commit() 
+            conn.commit()
 
             success += 1
             print(f"Loaded : {portfolio['portfolio_name']}")
@@ -66,8 +78,21 @@ def load_portfolio():
             print(f"Failed : {portfolio['portfolio_name']}")
             print(e)
 
-    cursor.close()
-    conn.close()
+            log_error(
+                log_file=log_file,
+                ticker=portfolio["portfolio_name"],
+                error=e,
+            )
+
+    try:
+        end_log(
+            log_file=log_file,
+            success=success,
+            failed=failed,
+        )
+    finally:
+        cursor.close()
+        conn.close()
 
     print("\n------------------------------")
     print(f"Successful : {success}")

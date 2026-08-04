@@ -72,10 +72,11 @@ def upsert_benchmark_price(
 
 
 # Download benchmark prices from Yahoo Finance
-def download_benchmark_prices(symbol):
+def download_benchmark_prices(symbol, start_date):
 
-    end_date = date.today()
-    start_date = end_date - timedelta(days=BACKFILL_DAYS)
+    # Yahoo treats end as exclusive, so today needs tomorrow's date to be
+    # included. Without this the 16:15 run never picks up today's close.
+    end_date = date.today() + timedelta(days=1)
 
     data = yf.download(
         symbol,
@@ -86,6 +87,32 @@ def download_benchmark_prices(symbol):
     )
 
     return data
+
+
+def get_last_benchmark_date(cursor, benchmark_id):
+
+    cursor.execute(
+        """
+        SELECT MAX(price_date)
+        FROM benchmark_prices
+        WHERE benchmark_id = %s;
+        """,
+        (benchmark_id,),
+    )
+
+    return cursor.fetchone()[0]
+
+
+def get_download_start(last_date):
+    """
+    Resume the day after what is already stored, or fall back to a full
+    backfill for a benchmark that has never been loaded.
+    """
+
+    if last_date is None:
+        return date.today() - timedelta(days=BACKFILL_DAYS)
+
+    return last_date + timedelta(days=1)
 
 
 def load_benchmark_prices():
@@ -99,6 +126,7 @@ def load_benchmark_prices():
 
     success = 0
     failed = 0
+    skipped = 0
     total_rows = 0
 
     log_file = PROJECT_ROOT / "reports" / "02_price_error_logs.txt"
@@ -113,14 +141,37 @@ def load_benchmark_prices():
     try:
         for benchmark_id, symbol in benchmarks:
 
-            print(f"\nDownloading {symbol}")
-
             try:
-                prices = download_benchmark_prices(symbol)
+                last_date = get_last_benchmark_date(cursor, benchmark_id)
+                start_date = get_download_start(last_date)
+
+                if start_date > date.today():
+                    print(f"\n{symbol} : already up to date.")
+                    skipped += 1
+                    continue
+
+                print(f"\nDownloading {symbol} from {start_date}")
+
+                prices = download_benchmark_prices(symbol, start_date)
 
                 if prices.empty:
+                    # An empty window on an already-loaded benchmark just
+                    # means no trading since last_date (weekend, holiday).
+                    # Empty on a first-ever load is a real download failure.
+                    if last_date is not None:
+                        print("No new data found.")
+                        skipped += 1
+                        continue
+
                     print("No data found.")
                     failed += 1
+
+                    log_error(
+                        log_file=log_file,
+                        ticker=symbol,
+                        error="No data found on first load",
+                    )
+
                     continue
 
                 inserted = 0
@@ -169,9 +220,10 @@ def load_benchmark_prices():
             conn.close()
 
     print("\n" + "=" * 60)
-    print(f"Benchmarks Loaded : {success}")
-    print(f"Benchmarks Failed : {failed}")
-    print(f"Total Rows Loaded : {total_rows}")
+    print(f"Benchmarks Loaded  : {success}")
+    print(f"Benchmarks Current : {skipped}")
+    print(f"Benchmarks Failed  : {failed}")
+    print(f"Total Rows Loaded  : {total_rows}")
     print("=" * 60)
 
 
