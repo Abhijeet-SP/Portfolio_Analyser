@@ -81,8 +81,8 @@ ALTER TABLE performance_metrics
         ON DELETE RESTRICT;
 
 ALTER TABLE portfolio_cashflows
-    DROP CONSTRAINT IF EXISTS fk_cashflows_portfolio
+    DROP CONSTRAINT IF EXISTS fk_cashflows_portfolio,
     ADD CONSTRAINT fk_cashflows_portfolio
         FOREIGN KEY (portfolio_id)
-        REFERENCES portfolio(portfolio_id)
+        REFERENCES portfolios (portfolio_id)
         ON DELETE RESTRICT;

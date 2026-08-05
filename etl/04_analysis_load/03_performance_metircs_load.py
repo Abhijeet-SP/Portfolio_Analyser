@@ -24,9 +24,6 @@ PERIOD_DAYS = {
     "3M": 91,
     "6M": 182,
     "1Y": DAYS_IN_YEAR,
-    "3Y": DAYS_IN_YEAR * 3,
-    "5Y": DAYS_IN_YEAR * 5,
-    "ITD": None,
 }
 
 # Two days is the minimum that compounds to anything.

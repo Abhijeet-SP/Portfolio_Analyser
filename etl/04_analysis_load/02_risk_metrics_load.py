@@ -28,9 +28,6 @@ PERIOD_DAYS = {
     "3M": 91,
     "6M": 182,
     "1Y": 365,
-    "3Y": 365 * 3,
-    "5Y": 365 * 5,
-    "ITD": None,
 }
 
 # Below this many return observations the statistics are noise, so the

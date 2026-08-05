@@ -3,15 +3,8 @@ import subprocess
 import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
 ETL_DIR = PROJECT_ROOT / "etl"
 
-# ETL scripts in execution order. Dimensions first (later loads reference
-# their ids), then market prices, then position history, then the derived
-# analysis tables which read everything above.
-#
-# 00_generate_data is deliberately absent: those scripts rewrite the
-# synthetic CSVs in data/. Run them by hand when new data is wanted.
 ETL_SCRIPTS = [
     "01_dimension_load/01_load_equity_instruments.py",
     "01_dimension_load/02_load_etf_bonds_instrument.py",
@@ -32,10 +25,6 @@ ETL_SCRIPTS = [
 
 
 def run_etl_script(script):
-    """
-    Each loader owns its own connection, error log and commit boundary, so it
-    runs as its own process. Returns True when it exited cleanly.
-    """
 
     print("\n" + "#" * 60, flush=True)
     print(f"# {script}", flush=True)
@@ -54,11 +43,7 @@ def run_data_load():
     completed = []
 
     for script in ETL_SCRIPTS:
-
         if not run_etl_script(script):
-
-            # Later stages read what earlier ones write, so a crash stops
-            # the chain rather than loading on top of missing data.
             print("\n" + "!" * 60)
             print(f"Aborted at : {script}")
             print(f"Completed  : {len(completed)}/{len(ETL_SCRIPTS)}")
@@ -69,7 +54,7 @@ def run_data_load():
             sys.exit(1)
 
         completed.append(script)
-
+        
     print("\n" + "=" * 60)
     print(f"Data load completed successfully. {len(completed)} scripts run.")
     print("Row-level failures, if any, are in reports/.")
